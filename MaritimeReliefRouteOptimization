@@ -1,0 +1,322 @@
+import java.util.*;
+
+public class MaritimeReliefRouteOptimization {
+
+    // Distance Matrix (Adjacency Matrix)
+    static int[][] distanceMatrix = {
+        {0, 15, 25, 35},
+        {15, 0, 30, 28},
+        {25, 30, 0, 20},
+        {35, 28, 20, 0}
+    };
+
+    static String[] locations = {"Port A", "Port B", "Relief Center C", "Relief Center D"};
+
+    // ===========================
+    // DYNAMIC PROGRAMMING TSP
+    // ===========================
+    public static String dynamicProgrammingTSP(int[][] dist) {
+        int n = dist.length;
+        int VISITED_ALL = (1 << n) - 1;
+        int[][] memo = new int[n][1 << n];
+        String[][] paths = new String[n][1 << n];
+        for (int i = 0; i < n; i++) Arrays.fill(memo[i], -1);
+
+        int minCost = dynamicProgrammingTSPHelper(0, 1, dist, memo, VISITED_ALL, paths);
+
+        StringBuilder route = new StringBuilder();
+        int currentCity = 0;
+        int currentMask = 1;
+        route.append(locations[currentCity]);
+
+        while (true) {
+            String nextCityName = paths[currentCity][currentMask];
+            if (nextCityName == null) break;
+            route.append(" -> ").append(nextCityName);
+
+            int nextCity = -1;
+            for (int i = 0; i < n; i++) {
+                if (locations[i].equals(nextCityName)) {
+                    nextCity = i;
+                    break;
+                }
+            }
+
+            currentMask |= (1 << nextCity);
+            currentCity = nextCity;
+        }
+
+        route.append(" -> ").append(locations[0]);
+
+        return "Dynamic Programming TSP Route: " + route.toString()
+                + " | Total Distance: " + minCost + " nm";
+    }
+
+    private static int dynamicProgrammingTSPHelper(int pos, int mask, int[][] dist,
+                                                    int[][] memo, int VISITED_ALL,
+                                                    String[][] paths) {
+        if (mask == VISITED_ALL) return dist[pos][0];
+        if (memo[pos][mask] != -1) return memo[pos][mask];
+
+        int n = dist.length;
+        int bestCost = Integer.MAX_VALUE;
+
+        for (int next = 0; next < n; next++) {
+            int nextMask = 1 << next;
+            if ((mask & nextMask) == 0) {
+                int newMask = mask | nextMask;
+                int cost = dist[pos][next] + dynamicProgrammingTSPHelper(next, newMask, dist, memo, VISITED_ALL, paths);
+                if (cost < bestCost) {
+                    bestCost = cost;
+                    paths[pos][mask] = locations[next];
+                }
+            }
+        }
+
+        memo[pos][mask] = bestCost;
+        return bestCost;
+    }
+
+    // ===========================
+    // MIN HEAP
+    // ===========================
+    static class MinHeap {
+        private int[] heap;
+        private int size;
+        private int capacity;
+
+        public MinHeap() {
+            capacity = 50;
+            heap = new int[capacity];
+            size = 0;
+        }
+
+        public void insert(int value) {
+            if (size == capacity) return;
+            heap[size] = value;
+            heapifyUp(size);
+            size++;
+        }
+
+        public int extractMin() {
+            if (size == 0) return -1;
+            int min = heap[0];
+            heap[0] = heap[size - 1];
+            size--;
+            heapifyDown(0);
+            return min;
+        }
+
+        private void heapifyUp(int index) {
+            while (index > 0) {
+                int parent = (index - 1) / 2;
+                if (heap[index] < heap[parent]) {
+                    int temp = heap[index];
+                    heap[index] = heap[parent];
+                    heap[parent] = temp;
+                    index = parent;
+                } else break;
+            }
+        }
+
+        private void heapifyDown(int index) {
+            while (true) {
+                int left = index * 2 + 1;
+                int right = index * 2 + 2;
+                int smallest = index;
+
+                if (left < size && heap[left] < heap[smallest]) smallest = left;
+                if (right < size && heap[right] < heap[smallest]) smallest = right;
+
+                if (smallest != index) {
+                    int temp = heap[index];
+                    heap[index] = heap[smallest];
+                    heap[smallest] = temp;
+                    index = smallest;
+                } else break;
+            }
+        }
+    }
+
+    // ===========================
+    // MAX HEAP
+    // ===========================
+    static class MaxHeap {
+        private int[] heap;
+        private int size;
+        private int capacity;
+
+        public MaxHeap() {
+            capacity = 50;
+            heap = new int[capacity];
+            size = 0;
+        }
+
+        public void insert(int value) {
+            if (size == capacity) return;
+            heap[size] = value;
+            heapifyUp(size);
+            size++;
+        }
+
+        public int extractMax() {
+            if (size == 0) return -1;
+            int max = heap[0];
+            heap[0] = heap[size - 1];
+            size--;
+            heapifyDown(0);
+            return max;
+        }
+
+        private void heapifyUp(int index) {
+            while (index > 0) {
+                int parent = (index - 1) / 2;
+                if (heap[index] > heap[parent]) {
+                    int temp = heap[index];
+                    heap[index] = heap[parent];
+                    heap[parent] = temp;
+                    index = parent;
+                } else break;
+            }
+        }
+
+        private void heapifyDown(int index) {
+            while (true) {
+                int left = index * 2 + 1;
+                int right = index * 2 + 2;
+                int largest = index;
+
+                if (left < size && heap[left] > heap[largest]) largest = left;
+                if (right < size && heap[right] > heap[largest]) largest = right;
+
+                if (largest != index) {
+                    int temp = heap[index];
+                    heap[index] = heap[largest];
+                    heap[largest] = temp;
+                    index = largest;
+                } else break;
+            }
+        }
+    }
+
+    // ===========================
+    // SPLAY TREE
+    // ===========================
+    static class SplayTree {
+
+        class Node {
+            int key;
+            Node left, right;
+
+            Node(int key) {
+                this.key = key;
+            }
+        }
+
+        private Node root;
+
+        private Node rightRotate(Node x) {
+            Node y = x.left;
+            x.left = y.right;
+            y.right = x;
+            return y;
+        }
+
+        private Node leftRotate(Node x) {
+            Node y = x.right;
+            x.right = y.left;
+            y.left = x;
+            return y;
+        }
+
+        private Node splay(Node root, int key) {
+            if (root == null || root.key == key) return root;
+
+            if (key < root.key) {
+                if (root.left == null) return root;
+
+                if (key < root.left.key) {
+                    root.left.left = splay(root.left.left, key);
+                    root = rightRotate(root);
+                } else if (key > root.left.key) {
+                    root.left.right = splay(root.left.right, key);
+                    if (root.left.right != null) root.left = leftRotate(root.left);
+                }
+
+                return (root.left == null) ? root : rightRotate(root);
+            } else {
+                if (root.right == null) return root;
+
+                if (key < root.right.key) {
+                    root.right.left = splay(root.right.left, key);
+                    if (root.right.left != null) root.right = rightRotate(root.right);
+                } else if (key > root.right.key) {
+                    root.right.right = splay(root.right.right, key);
+                    root = leftRotate(root);
+                }
+
+                return (root.right == null) ? root : leftRotate(root);
+            }
+        }
+
+        public void insert(int key) {
+            if (root == null) {
+                root = new Node(key);
+                return;
+            }
+
+            root = splay(root, key);
+
+            if (root.key == key) return;
+
+            Node newNode = new Node(key);
+
+            if (key < root.key) {
+                newNode.right = root;
+                newNode.left = root.left;
+                root.left = null;
+            } else {
+                newNode.left = root;
+                newNode.right = root.right;
+                root.right = null;
+            }
+
+            root = newNode;
+        }
+
+        public boolean search(int key) {
+            root = splay(root, key);
+            return root != null && root.key == key;
+        }
+    }
+
+    // ===========================
+    // DRIVER
+    // ===========================
+    public static void main(String[] args) {
+
+        // DP TSP Test
+        System.out.println(dynamicProgrammingTSP(distanceMatrix));
+
+        // Min-Heap Test
+        MinHeap minHeap = new MinHeap();
+        minHeap.insert(10);
+        minHeap.insert(3);
+        minHeap.insert(15);
+        System.out.println("Min-Heap Extract Min: " + minHeap.extractMin());
+
+        // Max-Heap Test
+        MaxHeap maxHeap = new MaxHeap();
+        maxHeap.insert(10);
+        maxHeap.insert(3);
+        maxHeap.insert(15);
+        System.out.println("Max-Heap Extract Max: " + maxHeap.extractMax());
+
+        // Splay Tree Test
+        SplayTree tree = new SplayTree();
+        tree.insert(20);
+        tree.insert(10);
+        tree.insert(30);
+        System.out.println("Splay Tree Search (10 found): " + tree.search(10));
+    }
+}
