@@ -1,6 +1,6 @@
 import java.util.*;
 
-public class MaritimeReliefRouteOptimization {
+public class DynamicProgramming {
 
     // Distance Matrix (Adjacency Matrix)
     static int[][] distanceMatrix = {
