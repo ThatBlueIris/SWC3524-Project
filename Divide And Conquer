@@ -1,0 +1,81 @@
+import java.util.*;
+
+public class DivideAndConquer {
+
+    static int[][] distanceMatrix = {
+        {0, 15, 25, 35},
+        {15, 0, 30, 28},
+        {25, 30, 0, 20},
+        {35, 28, 20, 0}
+    };
+
+    static String[] locations = {"Port A", "Port B", "Relief Center C", "Relief Center D"};
+
+    // ===========================
+    // DIVIDE & CONQUER TSP
+    // ===========================
+    public static String divideAndConquerTSP(int[][] dist) {
+        int n = dist.length;
+        boolean[] visited = new boolean[n];
+        visited[0] = true; // start at Port A
+        StringBuilder path = new StringBuilder();
+        path.append(locations[0]);
+
+        int totalDistance = divideAndConquerHelper(0, visited, 0, dist, n, path);
+
+        return "Divide & Conquer TSP Route: " + path.toString() + " | Total Distance: " + totalDistance + " nm";
+    }
+
+    private static int divideAndConquerHelper(int pos, boolean[] visited,
+                                              int currentCost, int[][] dist, int n,
+                                              StringBuilder path) {
+        if (allVisited(visited)) {
+            // Return to starting city
+            path.append(" -> ").append(locations[0]);
+            return currentCost + dist[pos][0];
+        }
+
+        int minCost = Integer.MAX_VALUE;
+        int bestNext = -1;
+        StringBuilder bestPath = new StringBuilder();
+
+        for (int next = 0; next < n; next++) {
+            if (!visited[next]) {
+                visited[next] = true;
+
+                StringBuilder tempPath = new StringBuilder(path.toString());
+                tempPath.append(" -> ").append(locations[next]);
+
+                int cost = divideAndConquerHelper(next, visited, currentCost + dist[pos][next], dist, n, tempPath);
+
+                if (cost < minCost) {
+                    minCost = cost;
+                    bestNext = next;
+                    bestPath = tempPath;
+                }
+
+                visited[next] = false; // backtrack
+            }
+        }
+
+        // Update the main path to the best path found in this recursion
+        path.setLength(0);
+        path.append(bestPath.toString());
+
+        return minCost;
+    }
+
+    private static boolean allVisited(boolean[] visited) {
+        for (boolean v : visited) {
+            if (!v) return false;
+        }
+        return true;
+    }
+
+    // ===========================
+    // DRIVER
+    // ===========================
+    public static void main(String[] args) {
+        System.out.println(divideAndConquerTSP(distanceMatrix));
+    }
+}
